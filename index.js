@@ -1,10 +1,13 @@
 const axios = require('axios')
+const input = require('./input').default
 
-const filmID = process.argv[2]
-let planetDiameters = []
+// process input
+const filmID = input.getFilmNumber()
+if(!filmID) process.exit()
 
 axios.get(`http://swapi.dev/api/films/${filmID}/`).then((response) => {
     let planetRequests = []
+    let planetDiameters = []
     for(const planetURL of response.data.planets){
         planetRequests.push(axios.get(planetURL))
     }
@@ -19,5 +22,23 @@ axios.get(`http://swapi.dev/api/films/${filmID}/`).then((response) => {
             }
         }
         console.log(planetDiameters.reduce((a, b) => a + b, 0))
+    }).catch((err) => {
+        if(err.isAxiosError){
+            console.log(`error occured :\nresponse status = ${err.response.status}\nerror message =`, err.response.data)
+            if(err.response.status == 404){
+                console.log(`\nAn internal error occured, try again :'(\n`)
+            }
+        } else {
+            console.log(err)
+        }
     })
+}).catch((err)=>{
+    if(err.isAxiosError){
+        console.log(`error occured :\nresponse status = ${err.response.status}\nerror message =`, err.response.data)
+        if(err.response.status == 404){
+            console.log(`\nFilm #${filmID} don't exist, try another number ;)\n`)
+        }
+    } else {
+        console.log(err)
+    }
 })
