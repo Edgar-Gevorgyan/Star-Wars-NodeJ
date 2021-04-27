@@ -1,44 +1,33 @@
 const axios = require('axios')
-const input = require('./input').default
+const args = require('./src/args')
+const errors = require('./src/errors')
+const Planet = require('./src/planet')
 
-// process input
-const filmID = input.getFilmNumber()
-if(!filmID) process.exit()
+// process the arguments
+if(!args.isValid()) process.exit()
+const filmID = args.getFilmID()
 
-axios.get(`http://swapi.dev/api/films/${filmID}/`).then((response) => {
-    let planetRequests = []
+
+axios.get(`http://swapi.dev/api/films/${filmID}/`)
+.then((response) => {
     let planetDiameters = []
+    let planetRequests = []
+    // sends requests to retrieve one by one the data of each planet present in the movie #${filmID}
     for(const planetURL of response.data.planets){
-        planetRequests.push(axios.get(planetURL))
+        let planetRequest = axios.get(planetURL)
+        planetRequests.push(planetRequest)
     }
-
-    axios.all(planetRequests).then((planetResponses) => {
+    axios.all(planetRequests).then((planetResponses) => { // wait until all the data of the plants are retrieved
         for(const planetResponse of planetResponses){
-            let planet = planetResponse.data
-            let surface_water = parseFloat(planet.surface_water)
-            let terrains = planet.terrain.split(',').map(item => item.trim())
-            if(surface_water > 0 && terrains.includes('mountains')){
-                planetDiameters.push(parseFloat(planet.diameter))
-            }
+            let planet = new Planet(planetResponse.data)
+            if(planet.isValid()) planetDiameters.push(planet.getDiameter())
         }
+        // displays the sum of the diameters of the valid planets
         console.log(planetDiameters.reduce((a, b) => a + b, 0))
     }).catch((err) => {
-        if(err.isAxiosError){
-            console.log(`error occured :\nresponse status = ${err.response.status}\nerror message =`, err.response.data)
-            if(err.response.status == 404){
-                console.log(`\nAn internal error occured, try again :'(\n`)
-            }
-        } else {
-            console.log(err)
-        }
+        errors.showMessage(err, "An internal error occured, try again :'(")
     })
-}).catch((err)=>{
-    if(err.isAxiosError){
-        console.log(`error occured :\nresponse status = ${err.response.status}\nerror message =`, err.response.data)
-        if(err.response.status == 404){
-            console.log(`\nFilm #${filmID} don't exist, try another number ;)\n`)
-        }
-    } else {
-        console.log(err)
-    }
+})
+.catch((err)=>{
+    errors.showMessage(err, `Film #${filmID} don't exist, try another number ;)`)
 })
