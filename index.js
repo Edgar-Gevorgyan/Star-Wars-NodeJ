@@ -10,19 +10,14 @@ const filmID = args.getFilmID()
 
 axios.get(`http://swapi.dev/api/films/${filmID}/`)
 .then((response) => {
-    let planetRequests = []
     // sends requests to retrieve one by one the data of each planet present in the movie #${filmID}
-    for(const planetURL of response.data.planets){
-        let planetRequest = axios.get(planetURL)
-        planetRequests.push(planetRequest)
-    }
-    let planetsDiameterSum = 0
-    axios.all(planetRequests).then((planetResponses) => { // wait until all the data of the plants are retrieved
-        for(const planetResponse of planetResponses){
-            let planet = new Planet(planetResponse.data)
-            // take account in the sum only if the planet respects the conditions
-            if(planet.isValid()) planetsDiameterSum += planet.getDiameter()
-        }
+    let planetRequests = response.data.planets.map(planetURL => axios.get(planetURL).then(planetResponse => new Planet(planetResponse.data)))
+
+    axios.all(planetRequests).then((planets) => { // wait until all the data of the plants are retrieved
+        
+        let planetsDiameterSum = planets.filter(planet => planet.isValid()) // filter the planets to keep the valid ones only 
+                                        .reduce((a, b) => a + b.getDiameter(), 0) // compute the sum of the diameters
+
         // displays the sum of the diameters of the valid planets
         console.log(planetsDiameterSum)
     }).catch((err) => {

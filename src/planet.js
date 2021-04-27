@@ -7,7 +7,7 @@ class Planet {
         // split to get a list of terrains
         // then trim each item to delete the spaces before and after the string
         this.terrains = planetData.terrain.split(',').map(item => item.trim())
-        this.diameter = parseFloat(planetData.diameter)
+        this.diameter = parseFloat(planetData.diameter || 0)
     }
     
     /**
